@@ -3,25 +3,21 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Dennis Beach Brawl - Retro Pixel Edition</title>
+<title>Dennis Beach Brawl - Pixel Surf Edition</title>
 <style>
-  /* Fullscreen canvas and body setup */
   html, body {
     margin: 0; padding: 0; height: 100%;
     background: #70c1b3; /* Ocean teal */
     overflow: hidden;
-    font-family: 'Press Start 2P', cursive, monospace;
+    font-family: Arial, sans-serif;
   }
-  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
   #gameCanvas {
     display: block;
     margin: 0 auto;
     background:
-      url('https://i.imgur.com/IkfflSq.png') bottom center no-repeat; /* Pixel beach bg */
+      url('https://i.imgur.com/Yz4jT3D.png') bottom center no-repeat; /* Pixel beach bg */
     background-size: cover;
   }
-
   #ui {
     position: fixed;
     top: 8px; left: 50%;
@@ -57,7 +53,6 @@
     border-radius: 8px;
     color: white;
     cursor: pointer;
-    font-family: 'Press Start 2P', cursive, monospace;
     transition: background-color 0.3s;
   }
   #menu button:hover {
@@ -102,7 +97,6 @@
   const highScoreDisplay = document.getElementById('highScore');
   const musicToggle = document.getElementById('musicToggle');
 
-  // Game variables
   let arrests = 0;
   let misses = 0;
   let coins = parseInt(localStorage.getItem('beachGameCoins')) || 0;
@@ -111,9 +105,7 @@
   let gameOver = false;
   let spawnInterval;
 
-  // Canvas size setup for fullscreen-ish feel
   function resizeCanvas() {
-    // Keep aspect ratio 3:4 but max height 90vh, max width 90vw
     let width = window.innerWidth * 0.9;
     let height = window.innerHeight * 0.9;
     if (width / height > 3/4) {
@@ -127,13 +119,13 @@
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
 
-  // Pixel-art targets — 5 different sprites, hosted on Imgur
+  // Pixel-art targets — 5 sprites, stable Imgur links
   const targetImgsSrc = [
-    'https://i.imgur.com/tc06xDm.png', // pixel guy 1
-    'https://i.imgur.com/VrF2u3M.png', // pixel guy 2
-    'https://i.imgur.com/82Ik9TL.png', // pixel girl 3
-    'https://i.imgur.com/q33TGIr.png', // pixel guy 4
-    'https://i.imgur.com/lqzPUur.png'  // pixel girl 5
+    'https://i.imgur.com/tc06xDm.png',
+    'https://i.imgur.com/VrF2u3M.png',
+    'https://i.imgur.com/82Ik9TL.png',
+    'https://i.imgur.com/q33TGIr.png',
+    'https://i.imgur.com/lqzPUur.png'
   ];
   const targetImgs = [];
   let loadedCount = 0;
@@ -143,15 +135,12 @@
     img.src = src;
     img.onload = () => {
       loadedCount++;
-      if (loadedCount === targetImgsSrc.length) {
-        // All loaded, we could start game automatically or just wait for start button
-      }
     };
     targetImgs.push(img);
   });
 
-  // Sound: Surf guitar loop (public domain clip from pixabay)
-  const bgMusic = new Audio('https://cdn.pixabay.com/download/audio/2022/11/29/audio_6a4e32a25d.mp3?filename=surf-guitar-ambient-11248.mp3');
+  // Surf rock background music (Pixabay, CC0)
+  const bgMusic = new Audio('https://cdn.pixabay.com/download/audio/2023/01/28/audio_c6e9a3ab35.mp3?filename=retro-surf-rock-14698.mp3');
   bgMusic.loop = true;
   bgMusic.volume = 0.4;
   let musicPlaying = false;
@@ -168,11 +157,9 @@
     }
   };
 
-  // Arrest sound effect (soft beep)
   const arrestSound = new Audio('https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg');
   arrestSound.volume = 0.7;
 
-  // Targets array
   let targets = [];
 
   function spawnTarget() {
@@ -196,22 +183,20 @@
       ctx.fillStyle = '#000c';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#f25f5c';
-      ctx.font = `${Math.floor(canvas.width/15)}px 'Press Start 2P', monospace`;
+      ctx.font = `${Math.floor(canvas.width/15)}px Arial, sans-serif`;
       ctx.textAlign = 'center';
       ctx.fillText('GAME OVER!', canvas.width/2, canvas.height/2 - 20);
-      ctx.font = `${Math.floor(canvas.width/30)}px 'Press Start 2P', monospace`;
+      ctx.font = `${Math.floor(canvas.width/30)}px Arial, sans-serif`;
       ctx.fillText(`Score: ${score}`, canvas.width/2, canvas.height/2 + 20);
       ctx.fillText('Click to Restart', canvas.width/2, canvas.height/2 + 70);
       return;
     }
 
-    // Move and draw targets
     for(let i = targets.length -1; i >= 0; i--) {
       let t = targets[i];
       t.y += t.speed;
       ctx.drawImage(t.img, t.x, t.y, t.size, t.size);
 
-      // If target escapes bottom
       if (t.y > canvas.height) {
         targets.splice(i,1);
         misses++;
@@ -235,10 +220,11 @@
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
 
-    // Check if click hits any target
     for(let i = targets.length -1; i >= 0; i--) {
       let t = targets[i];
-      if(mouseX >= t.x && mouseX <= t.x + t.size && mouseY >= t.y && mouseY <= t.y + t.size) {
+
+      // Increase clickable area by 15 pixels on all sides for easier taps
+      if(mouseX >= t.x - 15 && mouseX <= t.x + t.size + 15 && mouseY >= t.y - 15 && mouseY <= t.y + t.size + 15) {
         targets.splice(i,1);
         arrests++;
         score += 10;
@@ -271,7 +257,7 @@
       musicPlaying = true;
     }
 
-    spawnInterval = setInterval(spawnTarget, 1000);
+    spawnInterval = setInterval(spawnTarget, 900);
     gameLoop();
   }
 
@@ -298,7 +284,7 @@
     gameLoop();
   }
 
-  // Daily reward system
+  // Daily reward
   const today = new Date().toDateString();
   if(localStorage.getItem('lastLogin') !== today){
     coins += 100;

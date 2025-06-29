@@ -14,9 +14,9 @@
   #gameCanvas {
     display: block;
     margin: 0 auto;
-    background:
-      url('https://i.imgur.com/Yz4jT3D.png') bottom center no-repeat; /* Pixel beach bg */
-    background-size: cover;
+    background: url('https://i.imgur.com/a6fyW8V.png') bottom center no-repeat;
+    background-size: contain;
+    image-rendering: pixelated;  /* Crisp pixelated effect */
   }
   #ui {
     position: fixed;
@@ -223,7 +223,6 @@
     for(let i = targets.length -1; i >= 0; i--) {
       let t = targets[i];
 
-      // Increase clickable area by 15 pixels on all sides for easier taps
       if(mouseX >= t.x - 15 && mouseX <= t.x + t.size + 15 && mouseY >= t.y - 15 && mouseY <= t.y + t.size + 15) {
         targets.splice(i,1);
         arrests++;

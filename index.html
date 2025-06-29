@@ -3,8 +3,11 @@
 <head>
   <title>Dennis Beach Brawl</title>
   <style>
-    body { margin: 0; overflow: hidden; font-family: Arial; }
-    canvas { display: block; background: url('https://i.imgur.com/MBRbdks.jpg') center/cover no-repeat; }
+    body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+    canvas {
+      display: block;
+      background: url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80') center/cover no-repeat;
+    }
     #ui {
       position: absolute;
       top: 10px;
@@ -12,6 +15,7 @@
       color: white;
       font-size: 18px;
       z-index: 10;
+      user-select: none;
     }
     #musicToggle { margin-left: 20px; cursor: pointer; }
     #menu {
@@ -19,18 +23,27 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.85);
       color: white;
       padding: 30px;
       border-radius: 15px;
       text-align: center;
       z-index: 100;
+      user-select: none;
     }
     #menu button {
       margin-top: 10px;
       padding: 10px 20px;
       font-size: 18px;
       cursor: pointer;
+      border: none;
+      border-radius: 8px;
+      background-color: #007BFF;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    #menu button:hover {
+      background-color: #0056b3;
     }
   </style>
 </head>
@@ -58,52 +71,76 @@
     const coinDisplay = document.getElementById('coins');
     const highScoreDisplay = document.getElementById('highScore');
     const arrestDisplay = document.getElementById('arrests');
+    const musicToggle = document.getElementById('musicToggle');
 
+    // Game state
     let coins = parseInt(localStorage.getItem('beachGameCoins')) || 0;
     let highScore = parseInt(localStorage.getItem('beachHighScore')) || 0;
     let arrests = 0;
     const maxArrests = 5;
     let score = 0;
     let gameOver = false;
+    let spawnInterval;
+    let bgMusicPlaying = false;
 
     coinDisplay.textContent = coins;
     highScoreDisplay.textContent = highScore;
     arrestDisplay.textContent = arrests;
 
-    // Daily reward
+    // Daily reward system
     const today = new Date().toDateString();
     if (localStorage.getItem('lastLogin') !== today) {
       coins += 100;
       alert("🎁 Daily Reward: +100 Coins!");
       localStorage.setItem('lastLogin', today);
       localStorage.setItem('beachGameCoins', coins);
+      coinDisplay.textContent = coins;
     }
 
     // Background music
-    let bgMusic = new Audio('https://www.fesliyanstudios.com/play-mp3/387');
+    const bgMusic = new Audio('https://cdn.pixabay.com/download/audio/2022/03/28/audio_b16c3f9a62.mp3?filename=summer-breeze-1098.mp3');
     bgMusic.loop = true;
     bgMusic.volume = 0.3;
-    const musicToggle = document.getElementById('musicToggle');
+
     musicToggle.onclick = () => {
       if (bgMusic.paused) {
         bgMusic.play();
         musicToggle.textContent = "🎵 Music: On";
+        bgMusicPlaying = true;
       } else {
         bgMusic.pause();
         musicToggle.textContent = "🎵 Music: Off";
+        bgMusicPlaying = false;
       }
     };
 
+    // Target image (rowdy beachgoer)
     const targetImg = new Image();
-    targetImg.src = 'https://i.imgur.com/oVZBa7X.png'; // rowdy guy
-    const clickSound = new Audio('https://www.fesliyanstudios.com/play-mp3/438');
+    targetImg.src = 'https://i.imgur.com/oVZBa7X.png'; // reliable image link
 
+    // Sound effect on "arrest" (yelling + siren)
+    const arrestSounds = [
+      new Audio('https://actions.google.com/sounds/v1/alarms/siren_short.ogg'),  // siren sound
+      new Audio('https://actions.google.com/sounds/v1/people/yelling_angry.ogg') // yelling sound
+    ];
+
+    function playArrestSound() {
+      // play siren then yelling, slightly staggered
+      arrestSounds[0].volume = 0.5;
+      arrestSounds[1].volume = 0.7;
+      arrestSounds[0].play();
+      setTimeout(() => {
+        arrestSounds[1].play();
+      }, 400);
+    }
+
+    // Targets array
     let targets = [];
 
     function spawnTarget() {
       if (!gameOver) {
         targets.push({
-          x: Math.random() * 720,
+          x: Math.random() * (canvas.width - 80),
           y: -80,
           speed: 1 + Math.random() * 2
         });
@@ -112,25 +149,29 @@
 
     function gameLoop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       if (gameOver) {
         ctx.fillStyle = 'rgba(0,0,0,0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = 'white';
         ctx.font = '40px Arial';
-        ctx.fillText('🚔 You got arrested too many times!', 100, 200);
+        ctx.fillText('🚔 Too many arrests!', 240, 200);
         ctx.font = '20px Arial';
-        ctx.fillText('Tap anywhere to restart', 280, 250);
+        ctx.fillText('Click anywhere to restart', 280, 250);
         return;
       }
 
+      // Draw and update targets
       for (let i = targets.length - 1; i >= 0; i--) {
         let t = targets[i];
         t.y += t.speed;
         ctx.drawImage(targetImg, t.x, t.y, 80, 80);
+
         if (t.y > canvas.height) {
           targets.splice(i, 1);
           arrests++;
           arrestDisplay.textContent = arrests;
+          playArrestSound();
           if (arrests >= maxArrests) {
             endGame();
           }
@@ -140,12 +181,12 @@
       requestAnimationFrame(gameLoop);
     }
 
-    canvas.addEventListener('click', function(e) {
+    // Handle clicks on targets
+    canvas.addEventListener('click', (e) => {
       if (gameOver) {
         resetGame();
         return;
       }
-
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
@@ -156,7 +197,6 @@
           targets.splice(i, 1);
           coins += 10;
           score += 10;
-          clickSound.play();
           localStorage.setItem('beachGameCoins', coins);
           coinDisplay.textContent = coins;
           break;
@@ -173,13 +213,18 @@
       coinDisplay.textContent = coins;
       menu.style.display = "none";
       ui.style.display = "block";
-      bgMusic.play();
-      setInterval(spawnTarget, 1000);
+      if (!bgMusicPlaying) {
+        bgMusic.play();
+        musicToggle.textContent = "🎵 Music: On";
+        bgMusicPlaying = true;
+      }
+      spawnInterval = setInterval(spawnTarget, 1000);
       gameLoop();
     }
 
     function endGame() {
       gameOver = true;
+      clearInterval(spawnInterval);
       if (score > highScore) {
         highScore = score;
         localStorage.setItem('beachHighScore', highScore);
@@ -190,8 +235,8 @@
 
     function resetGame() {
       arrests = 0;
-      targets = [];
       score = 0;
+      targets = [];
       gameOver = false;
       arrestDisplay.textContent = 0;
       coinDisplay.textContent = coins;

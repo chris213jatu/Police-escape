@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Dennis Beach Brawl</title>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: Arial; }
+    canvas { display: block; background: url('https://i.imgur.com/MBRbdks.jpg') center/cover no-repeat; }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      color: white;
+      font-size: 18px;
+      z-index: 10;
+    }
+    #musicToggle { margin-left: 20px; cursor: pointer; }
+    #menu {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      text-align: center;
+      z-index: 100;
+    }
+    #menu button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+  <div id="ui" style="display: none;">
+    Coins: <span id="coins">0</span>
+    | High Score: <span id="highScore">0</span>
+    | Arrests: <span id="arrests">0</span>
+    <span id="musicToggle">🎵 Music: On</span>
+  </div>
+
+  <div id="menu">
+    <h1>Dennis Beach Brawl</h1>
+    <p>Stop the chaos before arrests pile up!</p>
+    <button onclick="startGame()">Start</button>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const ui = document.getElementById('ui');
+    const menu = document.getElementById('menu');
+    const coinDisplay = document.getElementById('coins');
+    const highScoreDisplay = document.getElementById('highScore');
+    const arrestDisplay = document.getElementById('arrests');
+
+    let coins = parseInt(localStorage.getItem('beachGameCoins')) || 0;
+    let highScore = parseInt(localStorage.getItem('beachHighScore')) || 0;
+    let arrests = 0;
+    const maxArrests = 5;
+    let score = 0;
+    let gameOver = false;
+
+    coinDisplay.textContent = coins;
+    highScoreDisplay.textContent = highScore;
+    arrestDisplay.textContent = arrests;
+
+    // Daily reward
+    const today = new Date().toDateString();
+    if (localStorage.getItem('lastLogin') !== today) {
+      coins += 100;
+      alert("🎁 Daily Reward: +100 Coins!");
+      localStorage.setItem('lastLogin', today);
+      localStorage.setItem('beachGameCoins', coins);
+    }
+
+    // Background music
+    let bgMusic = new Audio('https://www.fesliyanstudios.com/play-mp3/387');
+    bgMusic.loop = true;
+    bgMusic.volume = 0.3;
+    const musicToggle = document.getElementById('musicToggle');
+    musicToggle.onclick = () => {
+      if (bgMusic.paused) {
+        bgMusic.play();
+        musicToggle.textContent = "🎵 Music: On";
+      } else {
+        bgMusic.pause();
+        musicToggle.textContent = "🎵 Music: Off";
+      }
+    };
+
+    const targetImg = new Image();
+    targetImg.src = 'https://i.imgur.com/oVZBa7X.png'; // rowdy guy
+    const clickSound = new Audio('https://www.fesliyanstudios.com/play-mp3/438');
+
+    let targets = [];
+
+    function spawnTarget() {
+      if (!gameOver) {
+        targets.push({
+          x: Math.random() * 720,
+          y: -80,
+          speed: 1 + Math.random() * 2
+        });
+      }
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (gameOver) {
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'white';
+        ctx.font = '40px Arial';
+        ctx.fillText('🚔 You got arrested too many times!', 100, 200);
+        ctx.font = '20px Arial';
+        ctx.fillText('Tap anywhere to restart', 280, 250);
+        return;
+      }
+
+      for (let i = targets.length - 1; i >= 0; i--) {
+        let t = targets[i];
+        t.y += t.speed;
+        ctx.drawImage(targetImg, t.x, t.y, 80, 80);
+        if (t.y > canvas.height) {
+          targets.splice(i, 1);
+          arrests++;
+          arrestDisplay.textContent = arrests;
+          if (arrests >= maxArrests) {
+            endGame();
+          }
+        }
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    canvas.addEventListener('click', function(e) {
+      if (gameOver) {
+        resetGame();
+        return;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      for (let i = targets.length - 1; i >= 0; i--) {
+        let t = targets[i];
+        if (mouseX > t.x && mouseX < t.x + 80 && mouseY > t.y && mouseY < t.y + 80) {
+          targets.splice(i, 1);
+          coins += 10;
+          score += 10;
+          clickSound.play();
+          localStorage.setItem('beachGameCoins', coins);
+          coinDisplay.textContent = coins;
+          break;
+        }
+      }
+    });
+
+    function startGame() {
+      arrests = 0;
+      score = 0;
+      targets = [];
+      gameOver = false;
+      arrestDisplay.textContent = arrests;
+      coinDisplay.textContent = coins;
+      menu.style.display = "none";
+      ui.style.display = "block";
+      bgMusic.play();
+      setInterval(spawnTarget, 1000);
+      gameLoop();
+    }
+
+    function endGame() {
+      gameOver = true;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('beachHighScore', highScore);
+        highScoreDisplay.textContent = highScore;
+        alert("🏆 NEW HIGH SCORE!");
+      }
+    }
+
+    function resetGame() {
+      arrests = 0;
+      targets = [];
+      score = 0;
+      gameOver = false;
+      arrestDisplay.textContent = 0;
+      coinDisplay.textContent = coins;
+      gameLoop();
+    }
+  </script>
+</body>
+</html>
